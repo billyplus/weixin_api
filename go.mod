@@ -1,4 +1,4 @@
-module weixinapi
+module weixin_api
 
 go 1.17
 

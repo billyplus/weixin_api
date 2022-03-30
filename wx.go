@@ -1,4 +1,4 @@
-package weixinapi
+package weixin_api
 
 import (
 	"context"
