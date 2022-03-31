@@ -1,4 +1,4 @@
-module weixin_api
+module github.com/billyplus/weixin_api
 
 go 1.17
 
