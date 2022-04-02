@@ -14,42 +14,60 @@ import (
 type Engine struct {
 	// accessToken       string
 	// accessExpiredTime time.Time
-	appId                 string
-	appSecret             string
-	wxDomain              string
-	repo                  IRepository
-	client                *http.Client
-	handleTextMessage     func(m *TextMessage) error
-	handleImageMessage    func(m *ImageMessage) error
-	handleVoiceMessage    func(m *VoiceMessage) error
-	handleVideoMessage    func(m *VideoMessage) error
-	handleLocationMessage func(m *LocationMessage) error
-	handleLinkMessage     func(m *LinkMessage) error
+	appId                  string
+	appSecret              string
+	wxDomain               string
+	repo                   IRepository
+	client                 *http.Client
+	handleTextMessage      func(m *TextMessage) error
+	handleImageMessage     func(m *ImageMessage) error
+	handleVoiceMessage     func(m *VoiceMessage) error
+	handleVideoMessage     func(m *VideoMessage) error
+	handleLocationMessage  func(m *LocationMessage) error
+	handleLinkMessage      func(m *LinkMessage) error
+	handleClickEvent       func(m *ClickEvent) error
+	handleLocationEvent    func(m *LocationEvent) error
+	handleViewEvent        func(m *ViewEvent) error
+	handleScanEvent        func(m *ScanEvent) error
+	handleSubscribeEvent   func(m *SubscribeEvent) error
+	handleUnsubscribeEvent func(m *UnsubscribeEvent) error
 }
 
 type WeiXinApiConfig struct {
-	AppId                 string
-	AppSecret             string
-	WeiXinDomain          string
-	AccessToken           string
-	HandleTextMessage     func(m *TextMessage) error
-	HandleImageMessage    func(m *ImageMessage) error
-	HandleVoiceMessage    func(m *VoiceMessage) error
-	HandleVideoMessage    func(m *VideoMessage) error
-	HandleLocationMessage func(m *LocationMessage) error
-	HandleLinkMessage     func(m *LinkMessage) error
+	AppId                  string
+	AppSecret              string
+	WeiXinDomain           string
+	AccessToken            string
+	HandleTextMessage      func(m *TextMessage) error
+	HandleImageMessage     func(m *ImageMessage) error
+	HandleVoiceMessage     func(m *VoiceMessage) error
+	HandleVideoMessage     func(m *VideoMessage) error
+	HandleLocationMessage  func(m *LocationMessage) error
+	HandleLinkMessage      func(m *LinkMessage) error
+	HandleClickEvent       func(m *ClickEvent) error
+	HandleLocationEvent    func(m *LocationEvent) error
+	HandleViewEvent        func(m *ViewEvent) error
+	HandleScanEvent        func(m *ScanEvent) error
+	HandleSubscribeEvent   func(m *SubscribeEvent) error
+	HandleUnsubscribeEvent func(m *UnsubscribeEvent) error
 }
 
 func New(cfg *WeiXinApiConfig) *Engine {
 	e := &Engine{}
 	e.appId = cfg.AppId
-	e.appSecret = cfg.AppSecret
+
 	e.handleTextMessage = cfg.HandleTextMessage
 	e.handleImageMessage = cfg.HandleImageMessage
 	e.handleVoiceMessage = cfg.HandleVoiceMessage
 	e.handleVideoMessage = cfg.HandleVideoMessage
 	e.handleLocationMessage = cfg.HandleLocationMessage
 	e.handleLinkMessage = cfg.HandleLinkMessage
+	e.handleClickEvent = cfg.HandleClickEvent
+	e.handleLocationEvent = cfg.HandleLocationEvent
+	e.handleViewEvent = cfg.HandleViewEvent
+	e.handleScanEvent = cfg.HandleScanEvent
+	e.handleSubscribeEvent = cfg.HandleSubscribeEvent
+	e.handleUnsubscribeEvent = cfg.HandleUnsubscribeEvent
 	if cfg.WeiXinDomain == "" {
 		e.wxDomain = "https://api.weixin.qq.com"
 	} else {

@@ -2,6 +2,7 @@ package weixin_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 
 	"github.com/pkg/errors"
@@ -19,19 +20,33 @@ const (
 	MsgTypeEvent      = "event"      // 事件推送
 )
 
+const (
+	EventTypeClick       = "CLICK"       // 自定义菜单事件
+	EventTypeView        = "VIEW"        // 点菜单跳转链接
+	EventTypeLocation    = "LOCATION"    // 上报地理位置
+	EventTypeScan        = "SCAN"        // 用户已关注
+	EventTypeSubscribe   = "subscribe"   // 用户未关注
+	EventTypeUnsubscribe = "unsubscribe" // 取消订阅
+
+)
+
 var (
 	ErrInvalidHandler     = errors.New("无效的消息处理函数")
 	ErrInvalidMessageType = errors.New("无效的消息类型")
 )
 
-func (e *Engine) HandleMessage(body []byte) error {
-	decoder := xml.NewDecoder(bytes.NewBuffer(body))
+func (e *Engine) HandleMessage(c context.Context, data []byte) error {
+	decoder := xml.NewDecoder(bytes.NewBuffer(data))
 	msgTyp := ""
+	evTyp := ""
 	var err error
 
 	for {
-		// Read tokens from the XML document in a stream.
-		t, _ := decoder.Token()
+		// TODO：快速查找指定节点
+		t, err := decoder.Token()
+		if err != nil {
+			break
+		}
 		if t == nil {
 			err = errors.New("xml解析token出错")
 			break
@@ -53,21 +68,62 @@ func (e *Engine) HandleMessage(body []byte) error {
 	}
 
 	switch msgTyp {
-	case MsgTypeEvent:
-		return handle(e.handleTextMessage, body)
+	case MsgTypeText:
+		return handle(e.handleTextMessage, data)
 	case MsgTypeImage:
-		return handle(e.handleImageMessage, body)
+		return handle(e.handleImageMessage, data)
 	case MsgTypeVoice:
-		return handle(e.handleVoiceMessage, body)
+		return handle(e.handleVoiceMessage, data)
 	case MsgTypeVideo:
-		return handle(e.handleVideoMessage, body)
+		return handle(e.handleVideoMessage, data)
 	case MsgTypeLocation:
-		return handle(e.handleLocationMessage, body)
+		return handle(e.handleLocationMessage, data)
 	case MsgTypeLink:
-		return handle(e.handleLinkMessage, body)
-	default:
-		return ErrInvalidMessageType
+		return handle(e.handleLinkMessage, data)
+	case MsgTypeEvent:
+		for {
+			// TODO：快速查找指定节点
+			t, err := decoder.Token()
+			if err != nil {
+				break
+			}
+			if t == nil {
+				err = errors.New("xml解析token出错")
+				break
+			}
+			// Inspect the type of the token just read.
+			switch se := t.(type) {
+			case xml.StartElement:
+				// 找到消息类型
+				if se.Name.Local == "Event" {
+					// 解析消息类型
+					err = decoder.DecodeElement(&evTyp, &se)
+					break
+				}
+			}
+		}
+
+		if err != nil {
+			return errors.Wrap(err, "DecodeXML")
+		}
+
+		switch evTyp {
+		case EventTypeSubscribe:
+			return handle(e.handleSubscribeEvent, data)
+		case EventTypeUnsubscribe:
+			return handle(e.handleUnsubscribeEvent, data)
+		case EventTypeClick:
+			return handle(e.handleClickEvent, data)
+		case EventTypeView:
+			return handle(e.handleViewEvent, data)
+		case EventTypeLocation:
+			return handle(e.handleLocationEvent, data)
+		case EventTypeScan:
+			return handle(e.handleScanEvent, data)
+		}
 	}
+
+	return ErrInvalidMessageType
 }
 
 func handle[T any](fn func(m *T) error, body []byte) error {
