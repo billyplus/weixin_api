@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"fmt"
 
 	"github.com/pkg/errors"
 )
@@ -39,10 +40,12 @@ func (e *Engine) HandleMessage(c context.Context, data []byte) error {
 	msgTyp := ""
 	evTyp := ""
 	var err error
+	var t xml.Token
 
+LOOP:
 	for {
 		// TODO：快速查找指定节点
-		t, err := decoder.Token()
+		t, err = decoder.Token()
 		if err != nil {
 			break
 		}
@@ -53,12 +56,26 @@ func (e *Engine) HandleMessage(c context.Context, data []byte) error {
 		// Inspect the type of the token just read.
 		switch se := t.(type) {
 		case xml.StartElement:
+			fmt.Println("start:", se.Name.Local)
 			// 找到消息类型
 			if se.Name.Local == "MsgType" {
 				// 解析消息类型
-				err = decoder.DecodeElement(&msgTyp, &se)
-				break
+				t, err = decoder.Token()
+				if err != nil {
+					break LOOP
+				}
+				if t == nil {
+					err = errors.New("xml解析token出错")
+					break LOOP
+				}
+				switch el := t.(type) {
+				case xml.CharData:
+					msgTyp = string(el)
+				}
+				// err = decoder.DecodeElement(&msgTyp, &se)
+				break LOOP
 			}
+			break
 		}
 	}
 
@@ -80,6 +97,7 @@ func (e *Engine) HandleMessage(c context.Context, data []byte) error {
 	case MsgTypeLink:
 		return handle(e.handleLinkMessage, data)
 	case MsgTypeEvent:
+	LOOP_EVENT:
 		for {
 			// TODO：快速查找指定节点
 			t, err := decoder.Token()
@@ -93,12 +111,27 @@ func (e *Engine) HandleMessage(c context.Context, data []byte) error {
 			// Inspect the type of the token just read.
 			switch se := t.(type) {
 			case xml.StartElement:
+				fmt.Println("start")
 				// 找到消息类型
 				if se.Name.Local == "Event" {
-					// 解析消息类型
-					err = decoder.DecodeElement(&evTyp, &se)
-					break
+					// 解析event类型
+					t, err = decoder.Token()
+					if err != nil {
+						break LOOP_EVENT
+					}
+					if t == nil {
+						err = errors.New("xml解析token出错")
+						break LOOP_EVENT
+					}
+					switch el := t.(type) {
+					case xml.CharData:
+						fmt.Println("char", string(el))
+						evTyp = string(el)
+					}
+					// err = decoder.DecodeElement(&msgTyp, &se)
+					break LOOP_EVENT
 				}
+				break
 			}
 		}
 
