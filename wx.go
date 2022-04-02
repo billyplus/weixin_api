@@ -14,9 +14,11 @@ import (
 type Engine struct {
 	// accessToken       string
 	// accessExpiredTime time.Time
-	appId                  string
-	appSecret              string
-	wxDomain               string
+	appId     string
+	appSecret string
+	appToken  string
+	wxDomain  string
+	// accessToken            string
 	repo                   IRepository
 	client                 *http.Client
 	handleTextMessage      func(m *TextMessage) error
@@ -34,10 +36,11 @@ type Engine struct {
 }
 
 type WeiXinApiConfig struct {
-	AppId                  string
-	AppSecret              string
-	WeiXinDomain           string
-	AccessToken            string
+	AppId        string
+	AppSecret    string
+	AppToken     string
+	WeiXinDomain string
+	// AccessToken            string
 	HandleTextMessage      func(m *TextMessage) error
 	HandleImageMessage     func(m *ImageMessage) error
 	HandleVoiceMessage     func(m *VoiceMessage) error
@@ -55,6 +58,14 @@ type WeiXinApiConfig struct {
 func New(cfg *WeiXinApiConfig) *Engine {
 	e := &Engine{}
 	e.appId = cfg.AppId
+	e.appToken = cfg.AppToken
+	e.appSecret = cfg.AppSecret
+
+	if cfg.WeiXinDomain == "" {
+		e.wxDomain = "https://api.weixin.qq.com"
+	} else {
+		e.wxDomain = "https://" + cfg.WeiXinDomain
+	}
 
 	e.handleTextMessage = cfg.HandleTextMessage
 	e.handleImageMessage = cfg.HandleImageMessage
@@ -68,12 +79,6 @@ func New(cfg *WeiXinApiConfig) *Engine {
 	e.handleScanEvent = cfg.HandleScanEvent
 	e.handleSubscribeEvent = cfg.HandleSubscribeEvent
 	e.handleUnsubscribeEvent = cfg.HandleUnsubscribeEvent
-	if cfg.WeiXinDomain == "" {
-		e.wxDomain = "https://api.weixin.qq.com"
-	} else {
-		e.wxDomain = "https://" + cfg.WeiXinDomain
-	}
-	// e.accessToken = cfg.AccessToken
 	e.client = &http.Client{}
 	return e
 }
