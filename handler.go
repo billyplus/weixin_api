@@ -31,8 +31,7 @@ const (
 )
 
 var (
-	ErrInvalidHandler     = errors.New("无效的消息处理函数")
-	ErrInvalidMessageType = errors.New("无效的消息类型")
+	ErrInvalidHandler = errors.New("无效的消息处理函数")
 )
 
 func (e *Engine) HandleMessage(c context.Context, data []byte) error {
@@ -121,9 +120,10 @@ func (e *Engine) HandleMessage(c context.Context, data []byte) error {
 		case EventTypeScan:
 			return handle(e.handleScanEvent, data)
 		}
+		return &ErrInvalidEventType{Type: evTyp}
 	}
 
-	return ErrInvalidMessageType
+	return &ErrInvalidMessageType{Type: msgTyp}
 }
 
 func handle[T any](fn func(m *T) error, body []byte) error {
