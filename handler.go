@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
-	"fmt"
 
 	"github.com/pkg/errors"
 )
@@ -32,7 +31,7 @@ const (
 )
 
 var (
-	ErrInvalidHandler = errors.New("无效的消息处理函数")
+	ErrInvalidHandler = errors.New("未注册消息处理函数")
 )
 
 func (e *Engine) HandleMessage(c context.Context, data []byte) error {
@@ -56,7 +55,6 @@ LOOP:
 		// Inspect the type of the token just read.
 		switch se := t.(type) {
 		case xml.StartElement:
-			fmt.Println("start:", se.Name.Local)
 			// 找到消息类型
 			if se.Name.Local == "MsgType" {
 				// 解析消息类型
@@ -111,7 +109,6 @@ LOOP:
 			// Inspect the type of the token just read.
 			switch se := t.(type) {
 			case xml.StartElement:
-				fmt.Println("start")
 				// 找到消息类型
 				if se.Name.Local == "Event" {
 					// 解析event类型
@@ -125,7 +122,6 @@ LOOP:
 					}
 					switch el := t.(type) {
 					case xml.CharData:
-						fmt.Println("char", string(el))
 						evTyp = string(el)
 					}
 					// err = decoder.DecodeElement(&msgTyp, &se)
