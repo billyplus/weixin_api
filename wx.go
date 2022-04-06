@@ -44,6 +44,7 @@ type WeiXinApiConfig struct {
 	AppSecret    string
 	AppToken     string
 	WeiXinDomain string
+	Repository   IRepository
 	// AccessToken            string
 	HandleTextMessage      func(m *TextMessage) error
 	HandleImageMessage     func(m *ImageMessage) error
@@ -64,6 +65,7 @@ func New(cfg *WeiXinApiConfig) *Engine {
 	e.appId = cfg.AppId
 	e.appToken = cfg.AppToken
 	e.appSecret = cfg.AppSecret
+	e.repo = cfg.Repository
 
 	if cfg.WeiXinDomain == "" {
 		e.wxDomain = "https://api.weixin.qq.com"
