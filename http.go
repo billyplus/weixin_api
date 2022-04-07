@@ -1,6 +1,7 @@
 package weixin_api
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -47,7 +48,7 @@ func PostJSON[T any](url string, body interface{}) (*T, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "json.Marshal:")
 	}
-	request, err := http.NewRequest(http.MethodPost, url, nil)
+	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
 	if err != nil {
 		log.Error().Err(err).Msg("[reloadGameConfig]新建http请求失败")
 		return nil, err
