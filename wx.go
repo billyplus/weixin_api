@@ -150,99 +150,43 @@ type QRCodeInfo struct {
 	URL       string `json:"url"`
 }
 
-type qrCodeScene struct {
-	SceneId  int32  `json:"scene_id,omitempty"`
-	SceneStr string `json:"scene_str,omitempty"`
+type qrCodeActionInfo[T any] struct {
+	Scene map[string]T `json:"scene"`
 }
 
-type qrCodeActionInfo struct {
-	Scene qrCodeScene `json:"scene"`
-}
-
-type qrCodeReqBody struct {
-	ExpireSeconds int32            `json:"expire_seconds,omitempty"`
-	ActionName    string           `json:"action_name"`
-	ActionInfo    qrCodeActionInfo `json:"action_info"`
+type qrCodeReqBody[T any] struct {
+	ExpireSeconds int32               `json:"expire_seconds,omitempty"`
+	ActionName    string              `json:"action_name"`
+	ActionInfo    qrCodeActionInfo[T] `json:"action_info"`
 }
 
 func CreateQRCode(e IEngine, id int32, expireSeconds int32) (*QRCodeInfo, error) {
-	tok, err := e.GetAccessToken()
-	if err != nil {
-		return nil, errors.WithMessage(err, "GetAccessToken:")
-	}
-	req := qrCodeReqBody{
-		ExpireSeconds: expireSeconds,
-		ActionName:    "QR_SCENE",
-		ActionInfo: qrCodeActionInfo{
-			Scene: qrCodeScene{
-				SceneId: id,
-			},
-		},
-	}
-
-	info, err := PostJSON[QRCodeInfo](`https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=`+tok, &req)
-	if err != nil {
-		return nil, errors.WithMessage(err, "PostJSON:")
-	}
-
-	return info, nil
+	return createQRCode(e, "QR_SCENE", "scene_id", id, expireSeconds)
 }
 
 func CreateQRCodeByStr(e IEngine, id string, expireSeconds int32) (*QRCodeInfo, error) {
-	tok, err := e.GetAccessToken()
-	if err != nil {
-		return nil, errors.WithMessage(err, "GetAccessToken:")
-	}
-	req := qrCodeReqBody{
-		ExpireSeconds: expireSeconds,
-		ActionName:    "QR_STR_SCENE",
-		ActionInfo: qrCodeActionInfo{
-			Scene: qrCodeScene{
-				SceneStr: id,
-			},
-		},
-	}
-
-	info, err := PostJSON[QRCodeInfo](`https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=`+tok, &req)
-	if err != nil {
-		return nil, errors.WithMessage(err, "PostJSON:")
-	}
-
-	return info, nil
+	return createQRCode(e, "QR_STR_SCENE", "scene_str", id, expireSeconds)
 }
 
 func CreateLimitQRCode(e IEngine, id int32) (*QRCodeInfo, error) {
-	tok, err := e.GetAccessToken()
-	if err != nil {
-		return nil, errors.WithMessage(err, "GetAccessToken:")
-	}
-	req := qrCodeReqBody{
-		ActionName: "QR_LIMIT_SCENE",
-		ActionInfo: qrCodeActionInfo{
-			Scene: qrCodeScene{
-				SceneId: id,
-			},
-		},
-	}
-
-	info, err := PostJSON[QRCodeInfo](`https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=`+tok, &req)
-	if err != nil {
-		return nil, errors.WithMessage(err, "PostJSON:")
-	}
-
-	return info, nil
+	return createQRCode(e, "QR_LIMIT_SCENE", "scene_id", id, 0)
 }
 
 func CreateLimitQRCodeByStr(e IEngine, id string) (*QRCodeInfo, error) {
+	return createQRCode(e, "QR_LIMIT_STR_SCENE", "scene_str", id, 0)
+}
+
+func createQRCode[IdType any](e IEngine, actionName, idKey string, id IdType, expireSeconds int32) (*QRCodeInfo, error) {
 	tok, err := e.GetAccessToken()
 	if err != nil {
 		return nil, errors.WithMessage(err, "GetAccessToken:")
 	}
-	req := qrCodeReqBody{
-		ActionName: "QR_LIMIT_STR_SCENE",
-		ActionInfo: qrCodeActionInfo{
-			Scene: qrCodeScene{
-				SceneStr: id,
+	req := qrCodeReqBody[IdType]{
+		ExpireSeconds: expireSeconds,
+		ActionName:    "QR_LIMIT_STR_SCENE",
+		ActionInfo: qrCodeActionInfo[IdType]{
+			Scene: map[string]IdType{
+				idKey: id,
 			},
 		},
 	}
