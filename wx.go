@@ -184,7 +184,7 @@ func createQRCode[IdType any](e IEngine, actionName, idKey string, id IdType, ex
 	}
 	req := qrCodeReqBody[IdType]{
 		ExpireSeconds: expireSeconds,
-		ActionName:    "QR_LIMIT_STR_SCENE",
+		ActionName:    actionName,
 		ActionInfo: qrCodeActionInfo[IdType]{
 			Scene: map[string]IdType{
 				idKey: id,
