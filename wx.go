@@ -145,6 +145,7 @@ func (e *Engine) GrantAccessToken() error {
 // }
 
 type QRCodeInfo struct {
+	ErrorMsg
 	Ticket    string `json:"ticket"`
 	ExpiresIn int32  `json:"expire_seconds"`
 	URL       string `json:"url"`
@@ -194,6 +195,10 @@ func createQRCode[IdType any](e IEngine, actionName, idKey string, id IdType, ex
 	info, err := PostJSON[QRCodeInfo](`https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=`+tok, &req)
 	if err != nil {
 		return nil, errors.WithMessage(err, "PostJSON:")
+	}
+
+	if info.ErrCode > 0 {
+		return nil, errors.WithStack(info)
 	}
 
 	return info, nil
