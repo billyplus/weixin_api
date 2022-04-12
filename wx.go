@@ -103,7 +103,7 @@ type responseGrantToken struct {
 	ExpiresIn   int32  `json:"expires_in"`
 }
 
-// 从微信服务器获取Access Token
+// 从微信服务器获取Access Token，并保存到repository里面，后续调用GetAccessToken时，再从repository里面获取
 func (e *Engine) GrantAccessToken() error {
 	// https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=APPSECRET
 	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s", e.appId, e.appSecret)
