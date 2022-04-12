@@ -17,3 +17,8 @@ func ValidateSignature(tok, timestamp, nonce, signature string) bool {
 
 	return actual == signature
 }
+
+// 验证签名是否合法
+func (e *Engine) ValidateSignature(tok, timestamp, nonce, signature string) bool {
+	return ValidateSignature(e.appToken, timestamp, nonce, signature)
+}
