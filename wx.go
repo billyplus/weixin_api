@@ -94,6 +94,9 @@ func (e *Engine) GetAccessToken() (string, error) {
 	if err != nil {
 		return "", errors.WithMessage(err, "repo.GetAccessToken")
 	}
+	if tok == "" {
+		return "", errors.New("AccessToken is empty")
+	}
 	return tok, nil
 }
 
