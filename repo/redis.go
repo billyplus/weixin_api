@@ -116,8 +116,8 @@ func (rc *RedisCache) GetString(ctx context.Context, key string) (string, error)
 	// return v, nil
 }
 
-func (rc *RedisCache) GetAccessToken(_ context.Context) (string, error) {
-	tok, err := rc.GetString(context.TODO(), keyAccessToken)
+func (rc *RedisCache) GetAccessToken(ctx context.Context) (string, error) {
+	tok, err := rc.GetString(ctx, keyAccessToken)
 	if errors.Is(err, redis.ErrNil) {
 		return "", nil
 	}
@@ -128,9 +128,9 @@ func (rc *RedisCache) GetAccessToken(_ context.Context) (string, error) {
 	// return tok, nil
 }
 
-func (rc *RedisCache) UpdateAccessToken(_ context.Context, tok string, expiredTime time.Time) error {
+func (rc *RedisCache) UpdateAccessToken(ctx context.Context, tok string, expiredTime time.Time) error {
 	dur := time.Until(expiredTime).Seconds()
-	if err := rc.set(context.TODO(), keyAccessToken, tok, "NX", "PX", int32(dur)); err != nil {
+	if err := rc.set(ctx, keyAccessToken, tok, "NX", "PX", int32(dur)); err != nil {
 		//log.Debug().Str("key", mut.key).Err(err).Msg("Lock")
 		return err
 	}
