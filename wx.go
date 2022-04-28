@@ -90,7 +90,7 @@ func New(cfg *WeiXinApiConfig) *Engine {
 }
 
 func (e *Engine) GetAccessToken() (string, error) {
-	tok, err := e.repo.GetAccessToken(context.TODO())
+	tok, err := e.repo.GetAccessToken(context.Background())
 	if err != nil {
 		return "", errors.WithMessage(err, "repo.GetAccessToken")
 	}
@@ -135,7 +135,7 @@ func (e *Engine) GrantAccessToken() error {
 	}
 
 	// 提前60秒更新
-	if err = e.repo.UpdateAccessToken(context.TODO(), v.AccessToken, time.Now().Add(time.Duration(v.ExpiresIn-60)*time.Second)); err != nil {
+	if err = e.repo.UpdateAccessToken(context.Background(), v.AccessToken, time.Now().Add(time.Duration(v.ExpiresIn-60)*time.Second)); err != nil {
 		return errors.Wrap(err, "repo.UpdateAccessToken")
 	}
 

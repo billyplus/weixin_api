@@ -18,7 +18,7 @@ func TestHandleMessage(t *testing.T) {
 	<EventKey><![CDATA[qrscene_123123]]></EventKey>
 	<Ticket><![CDATA[TICKET]]></Ticket>
   </xml>`)
-	err := e.HandleMessage(context.TODO(), body)
+	err := e.HandleMessage(context.Background(), body)
 	assert.Nil(t, err, "should not return error")
 	assert.True(t, false)
 }
