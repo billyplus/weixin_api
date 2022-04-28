@@ -129,7 +129,7 @@ func (rc *RedisCache) GetAccessToken(ctx context.Context) (string, error) {
 }
 
 func (rc *RedisCache) UpdateAccessToken(ctx context.Context, tok string, expiredTime time.Time) error {
-	dur := time.Until(expiredTime).Seconds()
+	dur := time.Until(expiredTime).Milliseconds()
 	if err := rc.set(ctx, keyAccessToken, tok, "NX", "PX", int32(dur)); err != nil {
 		//log.Debug().Str("key", mut.key).Err(err).Msg("Lock")
 		return err
