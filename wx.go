@@ -15,6 +15,8 @@ type IEngine interface {
 	GetAccessToken() (string, error)
 }
 
+var _ IEngine = (*Engine)(nil)
+
 type Engine struct {
 	// accessToken       string
 	// accessExpiredTime time.Time
@@ -90,12 +92,26 @@ func New(cfg *WeiXinApiConfig) *Engine {
 }
 
 func (e *Engine) GetAccessToken() (string, error) {
-	tok, err := e.repo.GetAccessToken(context.Background())
+	tok, expire, err := e.repo.GetAccessToken(context.Background())
 	if err != nil {
 		return "", errors.WithMessage(err, "repo.GetAccessToken")
 	}
-	if tok == "" {
-		return "", errors.New("AccessToken is empty")
+	if tok == "" || time.Now().After(expire) {
+		// tok为空或tok已过期
+		if err = e.GrantAccessToken(); err != nil {
+			if tok != "" {
+				// 获取新的token失败，如果原来的tok不为空，先返回
+				return tok, nil
+			}
+			return "", errors.WithMessage(err, "GrantAccessToken")
+		}
+
+		// 再次获取access token
+		tok, _, err = e.repo.GetAccessToken(context.Background())
+		if err != nil {
+			return "", errors.WithMessage(err, "repo.GetAccessToken")
+		}
+
 	}
 	return tok, nil
 }
@@ -108,6 +124,10 @@ type responseGrantToken struct {
 
 // 从微信服务器获取Access Token，并保存到repository里面，后续调用GetAccessToken时，再从repository里面获取
 func (e *Engine) GrantAccessToken() error {
+	if err := e.repo.Lock(); err != nil {
+		return errors.WithMessage(err, "repo.Lock")
+	}
+	defer e.repo.UnLock()
 	// https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=APPSECRET
 	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s", e.appId, e.appSecret)
 	req, err := http.NewRequest(http.MethodGet, url, nil)

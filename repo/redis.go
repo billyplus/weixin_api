@@ -2,11 +2,14 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/billyplus/weixin_api"
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -47,8 +50,11 @@ const (
 )
 
 const (
-	keyAccessToken = "KeyAccessToken"
+	keyAccessToken = "WX_API_AccessToken"
+	keyLocked      = "WX_API_Repo_Locked"
 )
+
+var _ weixin_api.IRepository = (*RedisCache)(nil)
 
 type RedisCache struct {
 	pool *redis.Pool
@@ -85,6 +91,18 @@ func (rc *RedisCache) Close() {
 	}
 }
 
+func (rc *RedisCache) del(ctx context.Context, key string) error {
+	conn := rc.pool.Get()
+	defer conn.Close()
+
+	_, err := redis.Int(conn.Do(cmdDel, key))
+	if err != nil {
+		// log.Error("[Get] failed to get record to redis cache", zap.Error(err))
+		return errors.Wrap(err, "Del:")
+	}
+	return nil
+}
+
 func (rc *RedisCache) get(ctx context.Context, key string) (interface{}, error) {
 	conn := rc.pool.Get()
 	defer conn.Close()
@@ -101,38 +119,61 @@ func (rc *RedisCache) set(ctx context.Context, param ...interface{}) error {
 	conn := rc.pool.Get()
 	defer conn.Close()
 
-	_, err := redis.String(conn.Do(cmdSet, param...))
+	_, err := conn.Do(cmdSet, param...)
 	if err != nil {
 		return errors.Wrap(err, "Set:")
 	}
 	return nil
 }
 
-func (rc *RedisCache) GetString(ctx context.Context, key string) (string, error) {
-	return redis.String(rc.get(ctx, key))
-	// if err != nil {
-	// 	return "", errors.WithMessage(err, "redis.GetString:")
-	// }
-	// return v, nil
+type tokenData struct {
+	Tok    string
+	Expire time.Time
 }
 
-func (rc *RedisCache) GetAccessToken(ctx context.Context) (string, error) {
-	tok, err := rc.GetString(ctx, keyAccessToken)
+func (rc *RedisCache) GetAccessToken(ctx context.Context) (string, time.Time, error) {
+	data, err := redis.Bytes(rc.get(ctx, keyAccessToken))
 	if errors.Is(err, redis.ErrNil) {
-		return "", nil
+		return "", time.Now(), nil
 	}
-	return tok, err
-	// if err != nil {
-	// 	return "", errors.WithMessage(err, "redis.GetString")
-	// }
-	// return tok, nil
+	var v tokenData
+	if err = json.Unmarshal(data, &v); err != nil {
+		return "", time.Now(), err
+	}
+
+	return v.Tok, v.Expire, nil
 }
 
 func (rc *RedisCache) UpdateAccessToken(ctx context.Context, tok string, expiredTime time.Time) error {
 	dur := time.Until(expiredTime).Milliseconds()
-	if err := rc.set(ctx, keyAccessToken, tok, "NX", "PX", int32(dur)); err != nil {
+	d := &tokenData{
+		Tok:    tok,
+		Expire: expiredTime.Add(-60 * time.Second),
+	}
+	data, err := json.Marshal(d)
+	if err != nil {
+		return err
+	}
+	if err = rc.set(ctx, keyAccessToken, data, "PX", int32(dur)); err != nil {
 		//log.Debug().Str("key", mut.key).Err(err).Msg("Lock")
 		return err
 	}
 	return nil
+}
+
+func (rc *RedisCache) Lock() error {
+	ctx := context.Background()
+	if err := rc.set(ctx, keyLocked, 1, "NX", "PX", 5000); err != nil {
+		//log.Debug().Str("key", mut.key).Err(err).Msg("Lock")
+		return errors.WithMessage(err, "failed to lock repo:")
+	}
+	return nil
+}
+
+func (rc *RedisCache) UnLock() {
+	ctx := context.Background()
+	if err := rc.del(ctx, keyLocked); err != nil {
+		log.Error().Str("key", keyLocked).Err(err).Msg("Failed to unlock repo")
+		// return errors.WithMessage(err, "failed to unlock repo:")
+	}
 }

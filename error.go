@@ -1,6 +1,10 @@
 package weixin_api
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/pkg/errors"
+)
 
 type ErrorMsg struct {
 	ErrCode int32  `json:"errcode"`
@@ -26,3 +30,6 @@ type ErrInvalidEventType struct {
 func (err *ErrInvalidEventType) Error() string {
 	return fmt.Sprintf("无效的事件类型:%s", err.Type)
 }
+
+var ErrTokenInvalid = errors.New("AccessToken is invalid")
+var ErrRepoLocked = errors.New("Repository is already locked")
