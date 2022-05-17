@@ -44,6 +44,33 @@ func HttpGet[T any](url string) (*T, error) {
 	return &resp, nil
 }
 
+func HttpGetRaw(url string) ([]byte, error) {
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("[reloadGameConfig]新建http请求失败")
+		return nil, err
+	}
+
+	res, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Error().Err(err).Str("url", url).Msg("[reloadGameConfig]发送http请求失败")
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		log.Error().Err(err).Msg("[reloadGameConfig]无法访问Admin服务器")
+		return nil, errors.New(res.Status)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Error().Err(err).Msg("[reloadGameConfig]读取http回包失败")
+		return nil, errors.Wrap(err, "无法读取回包")
+	}
+
+	return data, nil
+}
+
 func PostJSON[T any](url string, body interface{}) (*T, error) {
 	var bd io.Reader
 	var ok bool
@@ -85,4 +112,42 @@ func PostJSON[T any](url string, body interface{}) (*T, error) {
 	}
 
 	return &resp, nil
+}
+
+func PostJSONReturnRaw(url string, body interface{}) ([]byte, error) {
+	var bd io.Reader
+	var ok bool
+	bd, ok = body.(io.Reader)
+	if !ok {
+		if data, ok := body.([]byte); ok {
+			bd = bytes.NewBuffer(data)
+		} else {
+			data, err := json.Marshal(body)
+			if err != nil {
+				return nil, errors.Wrap(err, "json.Marshal:")
+			}
+			bd = bytes.NewBuffer(data)
+		}
+	}
+	request, err := http.NewRequest(http.MethodPost, url, bd)
+	if err != nil {
+		return nil, errors.Wrap(err, "http.NewRequest:")
+	}
+
+	res, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "Request.Do:")
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		log.Error().Err(err).Msg("[reloadGameConfig]无法访问Admin服务器")
+		return nil, errors.New(res.Status)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "ioutil.ReadAll")
+	}
+
+	return data, nil
 }

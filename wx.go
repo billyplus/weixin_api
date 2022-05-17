@@ -226,3 +226,66 @@ func createQRCode[IdType any](e IEngine, actionName, idKey string, id IdType, ex
 
 	return info, nil
 }
+
+type SessionInfo struct {
+	ErrorMsg
+	OpenId     string `json:"openid"`
+	SessionKey string `json:"session_key"`
+	UnionId    string `json:"unionid"`
+}
+
+func (e *Engine) Code2Session(jscode string) (*SessionInfo, error) {
+	// url: https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code
+
+	url := fmt.Sprintf("https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code", e.appId, e.appSecret, jscode)
+	info, err := HttpGet[SessionInfo](url)
+	if err != nil {
+		return nil, errors.WithMessage(err, "PostJSON:")
+	}
+
+	if info.ErrCode > 0 {
+		return nil, errors.WithStack(info)
+	}
+
+	return info, nil
+}
+
+type reqPhoneNumberBody struct {
+	AccessCode string `json:"access_token"`
+	Code       string `json:"code"`
+}
+
+type PhoneInfo struct {
+	PhoneNumber     string
+	PurePhoneNumber string
+	CountryCode     string
+	Watermark       Watermark
+}
+
+type respPhoneNumber struct {
+	ErrorMsg
+	PhoneInfo *PhoneInfo `json:"phone_info"`
+}
+
+func (e *Engine) GetPhoneNumber(code string) (*PhoneInfo, error) {
+	// url: https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=ACCESS_TOKEN
+	tok, err := e.GetAccessToken()
+	if err != nil {
+		return nil, errors.WithMessage(err, "GetAccessToken:")
+	}
+	req := reqPhoneNumberBody{
+		AccessCode: tok,
+		Code:       code,
+	}
+
+	info, err := PostJSON[respPhoneNumber](`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=ACCESS_TOKEN`, &req)
+	if err != nil {
+		return nil, errors.WithMessage(err, "PostJSON:")
+	}
+
+	if info.ErrCode > 0 {
+		return nil, errors.WithStack(info)
+	}
+
+	return info.PhoneInfo, nil
+}

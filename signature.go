@@ -22,3 +22,8 @@ func ValidateSignature(tok, timestamp, nonce, signature string) bool {
 func (e *Engine) ValidateSignature(timestamp, nonce, signature string) bool {
 	return ValidateSignature(e.appToken, timestamp, nonce, signature)
 }
+
+type Watermark struct {
+	AppId     string `json:"appid"`     // 应用的appid
+	Timestamp int64  `json:"timestamp"` // 操作的时间戳
+}
