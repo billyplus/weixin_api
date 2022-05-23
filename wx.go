@@ -251,8 +251,7 @@ func (e *Engine) Code2Session(jscode string) (*SessionInfo, error) {
 }
 
 type reqPhoneNumberBody struct {
-	AccessCode string `json:"access_token"`
-	Code       string `json:"code"`
+	Code string `json:"code"`
 }
 
 type PhoneInfo struct {
@@ -274,11 +273,11 @@ func (e *Engine) GetPhoneNumber(code string) (*PhoneInfo, error) {
 		return nil, errors.WithMessage(err, "GetAccessToken:")
 	}
 	req := reqPhoneNumberBody{
-		AccessCode: tok,
-		Code:       code,
+		Code: code,
 	}
 
-	info, err := PostJSON[respPhoneNumber](`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=ACCESS_TOKEN`, &req)
+	url := fmt.Sprintf("https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=%s", tok)
+	info, err := PostJSON[respPhoneNumber](url, &req)
 	if err != nil {
 		return nil, errors.WithMessage(err, "PostJSON:")
 	}
