@@ -31,8 +31,22 @@ const (
 )
 
 var (
-	ErrInvalidHandler = errors.New("未注册消息处理函数")
+	ErrInvalidHandler  = errors.New("未注册消息处理函数")
+	ErrInvalidXMLToken = errors.New("xml解析token出错")
 )
+
+type TextMessageHandler func(m *TextMessage) error
+type ImageMessageHandler func(m *ImageMessage) error
+type VoiceMessageHandler func(m *VoiceMessage) error
+type VideoMessageHandler func(m *VideoMessage) error
+type LocationMessageHandler func(m *LocationMessage) error
+type LinkMessageHandler func(m *LinkMessage) error
+type ClickEventHandler func(m *ClickEvent) error
+type ViewEventHandler func(m *ViewEvent) error
+type LocationEventHandler func(m *LocationEvent) error
+type ScanEventHandler func(m *ScanEvent) error
+type SubscribeEventHandler func(m *SubscribeEvent) error
+type UnsubscribeEventHandler func(m *UnsubscribeEvent) error
 
 func (e *Engine) HandleMessage(c context.Context, data []byte) error {
 	decoder := xml.NewDecoder(bytes.NewBuffer(data))
@@ -46,11 +60,11 @@ LOOP:
 		// TODO：快速查找指定节点
 		t, err = decoder.Token()
 		if err != nil {
-			break
+			break LOOP
 		}
 		if t == nil {
-			err = errors.New("xml解析token出错")
-			break
+			err = ErrInvalidXMLToken
+			break LOOP
 		}
 		// Inspect the type of the token just read.
 		switch se := t.(type) {
@@ -63,7 +77,7 @@ LOOP:
 					break LOOP
 				}
 				if t == nil {
-					err = errors.New("xml解析token出错")
+					err = ErrInvalidXMLToken
 					break LOOP
 				}
 				switch el := t.(type) {
@@ -103,7 +117,7 @@ LOOP:
 				break
 			}
 			if t == nil {
-				err = errors.New("xml解析token出错")
+				err = ErrInvalidXMLToken
 				break
 			}
 			// Inspect the type of the token just read.
@@ -117,7 +131,7 @@ LOOP:
 						break LOOP_EVENT
 					}
 					if t == nil {
-						err = errors.New("xml解析token出错")
+						err = ErrInvalidXMLToken
 						break LOOP_EVENT
 					}
 					switch el := t.(type) {
@@ -132,7 +146,7 @@ LOOP:
 		}
 
 		if err != nil {
-			return errors.Wrap(err, "DecodeXML")
+			return errors.WithMessage(err, "DecodeMessageType")
 		}
 
 		switch evTyp {
@@ -164,4 +178,52 @@ func handle[T any](fn func(m *T) error, body []byte) error {
 		return err
 	}
 	return fn(m)
+}
+
+func (e *Engine) RegTextMessageHandler(h TextMessageHandler) {
+	e.handleTextMessage = h
+}
+
+func (e *Engine) RegImageMessageHandler(h ImageMessageHandler) {
+	e.handleImageMessage = h
+}
+
+func (e *Engine) RegVoiceMessageHandler(h VoiceMessageHandler) {
+	e.handleVoiceMessage = h
+}
+
+func (e *Engine) RegVideoMessageHandler(h VideoMessageHandler) {
+	e.handleVideoMessage = h
+}
+
+func (e *Engine) RegLocationMessageHandler(h LocationMessageHandler) {
+	e.handleLocationMessage = h
+}
+
+func (e *Engine) RegLinkMessageHandler(h LinkMessageHandler) {
+	e.handleLinkMessage = h
+}
+
+func (e *Engine) RegClickEventHandler(h ClickEventHandler) {
+	e.handleClickEvent = h
+}
+
+func (e *Engine) RegViewEventHandler(h ViewEventHandler) {
+	e.handleViewEvent = h
+}
+
+func (e *Engine) RegLocationEventHandler(h LocationEventHandler) {
+	e.handleLocationEvent = h
+}
+
+func (e *Engine) RegScanEventHandler(h ScanEventHandler) {
+	e.handleScanEvent = h
+}
+
+func (e *Engine) RegSubscribeEventHandler(h SubscribeEventHandler) {
+	e.handleSubscribeEvent = h
+}
+
+func (e *Engine) RegUnsubscribeEventHandler(h UnsubscribeEventHandler) {
+	e.handleUnsubscribeEvent = h
 }
