@@ -50,17 +50,20 @@ const (
 )
 
 const (
-	keyAccessToken = "WX_API_AccessToken"
-	keyLocked      = "WX_API_Repo_Locked"
+	keyAccessToken = "WX_API_AccessToken_%s"
+	keyLocked      = "WX_API_Repo_Locked_%s"
 )
 
 var _ weixin_api.IRepository = (*RedisCache)(nil)
 
 type RedisCache struct {
-	pool *redis.Pool
+	appId          string
+	keyAccessToken string
+	keyLocked      string
+	pool           *redis.Pool
 }
 
-func NewRedisRepo(host string, port int, password string) *RedisCache {
+func NewRedisRepo(appId string, host string, port int, password string) *RedisCache {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	p := &redis.Pool{
 		MaxIdle:     32,
@@ -78,7 +81,10 @@ func NewRedisRepo(host string, port int, password string) *RedisCache {
 		},
 	}
 	rc := &RedisCache{
-		pool: p,
+		appId:          appId,
+		keyAccessToken: fmt.Sprintf(keyAccessToken, appId),
+		keyLocked:      fmt.Sprintf(keyLocked, appId),
+		pool:           p,
 		// tokGen: utils.NewUIDGenerator(uint64(time.Now().UnixNano()) << 32),
 	}
 
@@ -132,7 +138,7 @@ type tokenData struct {
 }
 
 func (rc *RedisCache) GetAccessToken(ctx context.Context) (string, time.Time, error) {
-	data, err := redis.Bytes(rc.get(ctx, keyAccessToken))
+	data, err := redis.Bytes(rc.get(ctx, rc.keyAccessToken))
 	if errors.Is(err, redis.ErrNil) {
 		return "", time.Now(), nil
 	}
@@ -154,7 +160,7 @@ func (rc *RedisCache) UpdateAccessToken(ctx context.Context, tok string, expired
 	if err != nil {
 		return err
 	}
-	if err = rc.set(ctx, keyAccessToken, data, "PX", int32(dur)); err != nil {
+	if err = rc.set(ctx, rc.keyAccessToken, data, "PX", int32(dur)); err != nil {
 		//log.Debug().Str("key", mut.key).Err(err).Msg("Lock")
 		return err
 	}
@@ -163,7 +169,7 @@ func (rc *RedisCache) UpdateAccessToken(ctx context.Context, tok string, expired
 
 func (rc *RedisCache) Lock() error {
 	ctx := context.Background()
-	if err := rc.set(ctx, keyLocked, 1, "NX", "PX", 5000); err != nil {
+	if err := rc.set(ctx, rc.keyLocked, 1, "NX", "PX", 5000); err != nil {
 		//log.Debug().Str("key", mut.key).Err(err).Msg("Lock")
 		return errors.WithMessage(err, "failed to lock repo:")
 	}
@@ -172,8 +178,8 @@ func (rc *RedisCache) Lock() error {
 
 func (rc *RedisCache) UnLock() {
 	ctx := context.Background()
-	if err := rc.del(ctx, keyLocked); err != nil {
-		log.Error().Str("key", keyLocked).Err(err).Msg("Failed to unlock repo")
+	if err := rc.del(ctx, rc.keyLocked); err != nil {
+		log.Error().Str("key", rc.keyLocked).Err(err).Msg("Failed to unlock repo")
 		// return errors.WithMessage(err, "failed to unlock repo:")
 	}
 }
